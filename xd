@@ -1,0 +1,1640 @@
+--==================================================
+--    SCOOP GUI - ULTIMATE EXECUTOR EDITION v4.4 (ALL-IN-ONE HUB)
+--==================================================
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local MarketplaceService = game:GetService("MarketplaceService")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+
+local player = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+--==================================================
+-- SETTINGS & VARIABLES
+--==================================================
+
+local ThemeColor = Color3.fromRGB(255, 0, 0)
+local EspColor = Color3.fromRGB(255, 0, 0)
+local Transparency = 0
+local GuiScale = 0.85
+
+local espBoxEnabled = false
+local espTracerEnabled = false
+local fullbrightEnabled = false
+local espStorage = {}
+
+local customWalkSpeed = 16
+local customJumpPower = 50
+local useWalkSpeed = false
+local useJumpPower = false
+
+local savedTeleportPos = nil
+local startTime = tick()
+
+-- Player Lock & FOV Variables
+local playerLockEnabled = false
+local aimPartName = "Head"
+local fovEnabled = true
+local fovRadius = 120
+local fovColor = Color3.fromRGB(255, 255, 255)
+
+-- Addon Variables
+local hitboxExpanderEnabled = false
+local hitboxSize = 6
+local noclipActive = false
+local flyEnabled = false
+local originalSizes = {}
+
+-- New Features Variables
+local spectatingPlayer = nil
+local potatoModeActive = false
+local currentFpsCap = "Max"
+local potatoOverlay = nil
+
+-- Saved Scripts System
+local fileName = "ScoopExecutor_SavedScripts.json"
+local savedScripts = {
+	{ Name = "Infinite Yield", Code = "loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()" },
+	{ Name = "Dark Dex V3 (dex)", Code = "loadstring(game:HttpGet('https://cdn.jsdelivr.net/gh/Babyhamsta/RBLX_Scripts/Universal/Dex.lua'))()" }
+}
+
+if writefile and readfile and isfile and isfile(fileName) then
+	local success, result = pcall(function()
+		return HttpService:JSONDecode(readfile(fileName))
+	end)
+	if success and type(result) == "table" then
+		savedScripts = result
+	end
+end
+
+local function saveToFile()
+	if writefile then
+		pcall(function()
+			writefile(fileName, HttpService:JSONEncode(savedScripts))
+		end)
+	end
+end
+
+--==================================================
+-- SCREEN GUI
+--==================================================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SCOOP_Ultimate_Executor_GUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local scale = Instance.new("UIScale")
+scale.Scale = GuiScale
+scale.Parent = gui
+
+--==================================================
+-- MAIN WINDOW
+--==================================================
+
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.fromOffset(580, 420)
+main.Position = UDim2.new(0.5, -290, 0.5, -210)
+main.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Parent = gui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.Parent = main
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = ThemeColor
+mainStroke.Thickness = 2
+mainStroke.Parent = main
+
+--==================================================
+-- HEADER
+--==================================================
+
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 52)
+header.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = main
+
+local headerLine = Instance.new("Frame")
+headerLine.Size = UDim2.new(1, 0, 0, 1)
+headerLine.Position = UDim2.new(0, 0, 1, -1)
+headerLine.BackgroundColor3 = ThemeColor
+headerLine.BorderSizePixel = 0
+headerLine.Parent = header
+
+local logo = Instance.new("TextLabel")
+logo.Name = "Logo"
+logo.Size = UDim2.fromOffset(34, 34)
+logo.Position = UDim2.fromOffset(10, 9)
+logo.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+logo.Text = "S"
+logo.TextColor3 = ThemeColor
+logo.TextSize = 20
+logo.Font = Enum.Font.GothamBlack
+logo.Parent = header
+
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(1, 0)
+logoCorner.Parent = logo
+
+local logoStroke = Instance.new("UIStroke")
+logoStroke.Color = ThemeColor
+logoStroke.Thickness = 2
+logoStroke.Parent = logo
+
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(0, 250, 1, 0)
+title.Position = UDim2.fromOffset(54, 0)
+title.BackgroundTransparency = 1
+title.Text = "SCOOP ALL-IN-ONE HUB"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextSize = 15
+title.Font = Enum.Font.GothamBlack
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local minimize = Instance.new("TextButton")
+minimize.Name = "Minimize"
+minimize.Size = UDim2.fromOffset(34, 34)
+minimize.Position = UDim2.new(1, -78, 0, 9)
+minimize.BackgroundColor3 = Color3.fromRGB(18,18,18)
+minimize.Text = "−"
+minimize.TextColor3 = Color3.fromRGB(255,255,255)
+minimize.TextSize = 20
+minimize.Font = Enum.Font.GothamBold
+minimize.AutoButtonColor = false
+minimize.Parent = header
+
+local minCorner = Instance.new("UICorner")
+minCorner.CornerRadius = UDim.new(0, 7)
+minCorner.Parent = minimize
+
+local minStroke = Instance.new("UIStroke")
+minStroke.Color = ThemeColor
+minStroke.Thickness = 1
+minStroke.Parent = minimize
+
+local close = Instance.new("TextButton")
+close.Name = "Close"
+close.Size = UDim2.fromOffset(34, 34)
+close.Position = UDim2.new(1, -40, 0, 9)
+close.BackgroundColor3 = Color3.fromRGB(18,18,18)
+close.Text = "×"
+close.TextColor3 = Color3.fromRGB(255,255,255)
+close.TextSize = 20
+close.Font = Enum.Font.GothamBold
+close.AutoButtonColor = false
+close.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 7)
+closeCorner.Parent = close
+
+local closeStroke = Instance.new("UIStroke")
+closeStroke.Color = ThemeColor
+closeStroke.Thickness = 1
+closeStroke.Parent = close
+
+--==================================================
+-- CONTENT & SIDEBAR
+--==================================================
+
+local content = Instance.new("Frame")
+content.Name = "Content"
+content.Size = UDim2.new(1, 0, 1, -52)
+content.Position = UDim2.fromOffset(0, 52)
+content.BackgroundTransparency = 1
+content.Parent = main
+
+local sidebar = Instance.new("Frame")
+sidebar.Name = "Sidebar"
+sidebar.Size = UDim2.new(0, 150, 1, 0)
+sidebar.BackgroundColor3 = Color3.fromRGB(10,10,10)
+sidebar.BorderSizePixel = 0
+sidebar.Parent = content
+
+local profileCard = Instance.new("Frame")
+profileCard.Name = "Profile"
+profileCard.Size = UDim2.new(1, -12, 0, 82)
+profileCard.Position = UDim2.fromOffset(6, 6)
+profileCard.BackgroundColor3 = Color3.fromRGB(18,18,18)
+profileCard.BorderSizePixel = 0
+profileCard.Parent = sidebar
+
+local profileCorner = Instance.new("UICorner")
+profileCorner.CornerRadius = UDim.new(0, 8)
+profileCorner.Parent = profileCard
+
+local profileStroke = Instance.new("UIStroke")
+profileStroke.Color = ThemeColor
+profileStroke.Thickness = 1
+profileStroke.Parent = profileCard
+
+local avatar = Instance.new("ImageLabel")
+avatar.Name = "Avatar"
+avatar.Size = UDim2.fromOffset(43,43)
+avatar.Position = UDim2.fromOffset(7, 8)
+avatar.BackgroundColor3 = Color3.fromRGB(5,5,5)
+avatar.BorderSizePixel = 0
+avatar.Parent = profileCard
+
+local avatarCorner = Instance.new("UICorner")
+avatarCorner.CornerRadius = UDim.new(1,0)
+avatarCorner.Parent = avatar
+
+local avatarStroke = Instance.new("UIStroke")
+avatarStroke.Color = ThemeColor
+avatarStroke.Thickness = 1
+avatarStroke.Parent = avatar
+
+pcall(function()
+	avatar.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+end)
+
+local displayName = Instance.new("TextLabel")
+displayName.Size = UDim2.new(1, -58, 0, 20)
+displayName.Position = UDim2.fromOffset(56, 7)
+displayName.BackgroundTransparency = 1
+displayName.Text = player.DisplayName
+displayName.TextColor3 = Color3.fromRGB(255,255,255)
+displayName.TextSize = 12
+displayName.Font = Enum.Font.GothamBold
+displayName.TextXAlignment = Enum.TextXAlignment.Left
+displayName.TextTruncate = Enum.TextTruncate.AtEnd
+displayName.Parent = profileCard
+
+local username = Instance.new("TextLabel")
+username.Size = UDim2.new(1, -58, 0, 18)
+username.Position = UDim2.fromOffset(56, 27)
+username.BackgroundTransparency = 1
+username.Text = "@" .. player.Name
+username.TextColor3 = Color3.fromRGB(150,150,150)
+username.TextSize = 10
+username.Font = Enum.Font.Gotham
+username.TextXAlignment = Enum.TextXAlignment.Left
+username.TextTruncate = Enum.TextTruncate.AtEnd
+username.Parent = profileCard
+
+local uid = Instance.new("TextLabel")
+uid.Name = "UIDLabel"
+uid.Size = UDim2.new(1, -58, 0, 18)
+uid.Position = UDim2.fromOffset(56, 47)
+uid.BackgroundTransparency = 1
+uid.Text = "UID: " .. tostring(player.UserId)
+uid.TextColor3 = ThemeColor
+uid.TextSize = 9
+uid.Font = Enum.Font.GothamBold
+uid.TextXAlignment = Enum.TextXAlignment.Left
+uid.Parent = profileCard
+
+local sidebarScroll = Instance.new("ScrollingFrame")
+sidebarScroll.Name = "SidebarScroll"
+sidebarScroll.Size = UDim2.new(1, 0, 1, -94)
+sidebarScroll.Position = UDim2.fromOffset(0, 94)
+sidebarScroll.BackgroundTransparency = 1
+sidebarScroll.BorderSizePixel = 0
+sidebarScroll.ScrollBarThickness = 3
+sidebarScroll.ScrollBarImageColor3 = ThemeColor
+sidebarScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+sidebarScroll.CanvasSize = UDim2.new(0,0,0,0)
+sidebarScroll.Parent = sidebar
+
+local sideLayout = Instance.new("UIListLayout")
+sideLayout.Padding = UDim.new(0,6)
+sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sideLayout.Parent = sidebarScroll
+
+local sidePadding = Instance.new("UIPadding")
+sidePadding.PaddingTop = UDim.new(0,4)
+sidePadding.PaddingBottom = UDim.new(0,8)
+sidePadding.Parent = sidebarScroll
+
+--==================================================
+-- RIGHT PAGE CONTAINER
+--==================================================
+
+local page = Instance.new("Frame")
+page.Name = "Page"
+page.Size = UDim2.new(1, -160, 1, -10)
+page.Position = UDim2.fromOffset(158, 5)
+page.BackgroundColor3 = Color3.fromRGB(10,10,10)
+page.BorderSizePixel = 0
+page.Parent = content
+
+local pageCorner = Instance.new("UICorner")
+pageCorner.CornerRadius = UDim.new(0,8)
+pageCorner.Parent = page
+
+local pageStroke = Instance.new("UIStroke")
+pageStroke.Color = Color3.fromRGB(35,35,35)
+pageStroke.Thickness = 1
+pageStroke.Parent = page
+
+local pageTitle = Instance.new("TextLabel")
+pageTitle.Name = "PageTitle"
+pageTitle.Size = UDim2.new(1,-24,0,35)
+pageTitle.Position = UDim2.fromOffset(12,8)
+pageTitle.BackgroundTransparency = 1
+pageTitle.Text = "HOME"
+pageTitle.TextColor3 = ThemeColor
+pageTitle.TextSize = 16
+pageTitle.Font = Enum.Font.GothamBlack
+pageTitle.TextXAlignment = Enum.TextXAlignment.Left
+pageTitle.Parent = page
+
+local function createPageScroll(name)
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = name
+	scroll.Size = UDim2.new(1,-20,1,-52)
+	scroll.Position = UDim2.fromOffset(10,45)
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 3
+	scroll.ScrollBarImageColor3 = ThemeColor
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.CanvasSize = UDim2.new(0,0,0,0)
+	scroll.Visible = false
+	scroll.Parent = page
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0,8)
+	layout.Parent = scroll
+	return scroll
+end
+
+local homeScroll = createPageScroll("HomeScroll")
+local playerScroll = createPageScroll("PlayerScroll")
+local teleportScroll = createPageScroll("TeleportScroll")
+local itemsScroll = createPageScroll("ItemsScroll")
+local playerLockScroll = createPageScroll("PlayerLockScroll")
+local optimizationScroll = createPageScroll("OptimizationScroll") 
+local inspectorScroll = createPageScroll("InspectorScroll")     
+local executorScroll = createPageScroll("ExecutorScroll")
+local settingsScroll = createPageScroll("SettingsScroll")
+local aboutScroll = createPageScroll("AboutScroll")
+
+homeScroll.Visible = true
+
+--==================================================
+-- SIDEBAR BUTTONS
+--==================================================
+
+local buttons = {}
+local function createSideButton(text)
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(1, -14, 0, 32)
+	button.BackgroundColor3 = Color3.fromRGB(17,17,17)
+	button.BorderSizePixel = 0
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(220,220,220)
+	button.TextSize = 10
+	button.Font = Enum.Font.GothamBold
+	button.AutoButtonColor = false
+	button.Parent = sidebarScroll
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0,7)
+	corner.Parent = button
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = ThemeColor
+	stroke.Thickness = 1
+	stroke.Transparency = 0.35
+	stroke.Parent = button
+
+	buttons[text] = { Button = button, Stroke = stroke }
+	return button
+end
+
+local homeBtn = createSideButton("HOME")
+local playerBtn = createSideButton("PLAYER")
+local tpBtn = createSideButton("TELEPORT")
+local itemsBtn = createSideButton("ITEMS & ESP")
+local playerLockBtn = createSideButton("PLAYER LOCK")
+local optBtn = createSideButton("OPTIMIZATION")
+local inspectBtn = createSideButton("PLAYER INSPECT")
+local executorBtn = createSideButton("EXECUTOR")
+local settingsBtn = createSideButton("SETTINGS")
+local aboutBtn = createSideButton("ABOUT")
+
+local function clearPage()
+	homeScroll.Visible = false
+	playerScroll.Visible = false
+	teleportScroll.Visible = false
+	itemsScroll.Visible = false
+	playerLockScroll.Visible = false
+	optimizationScroll.Visible = false
+	inspectorScroll.Visible = false
+	executorScroll.Visible = false
+	settingsScroll.Visible = false
+	aboutScroll.Visible = false
+end
+
+homeBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "HOME"; homeScroll.Visible = true end)
+playerBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER MODS"; playerScroll.Visible = true end)
+tpBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "TELEPORT SYSTEM"; teleportScroll.Visible = true end)
+itemsBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "ITEMS & ESP"; itemsScroll.Visible = true end)
+playerLockBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER LOCK SYSTEM"; playerLockScroll.Visible = true end)
+optBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "OPTIMIZATION & POWER SAVER"; optimizationScroll.Visible = true end)
+inspectBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "PLAYER INSPECTOR & SPECTATE"; inspectorScroll.Visible = true end)
+executorBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "SCRIPT EXECUTOR & HUB"; executorScroll.Visible = true end)
+settingsBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "SETTINGS"; settingsScroll.Visible = true end)
+aboutBtn.MouseButton1Click:Connect(function() clearPage(); pageTitle.Text = "ABOUT"; aboutScroll.Visible = true end)
+
+--==================================================
+-- HOME TAB CONTENT
+--==================================================
+
+local function createDashboardCard(titleText, initialValue)
+	local card = Instance.new("Frame")
+	card.Size = UDim2.new(1, -4, 0, 48)
+	card.BackgroundColor3 = Color3.fromRGB(16, 16, 16)
+	card.BorderSizePixel = 0
+	card.Parent = homeScroll
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 7)
+	corner.Parent = card
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = ThemeColor
+	stroke.Thickness = 1
+	stroke.Transparency = 0.5
+	stroke.Parent = card
+
+	local tLabel = Instance.new("TextLabel")
+	tLabel.Size = UDim2.new(1, -16, 0, 18)
+	tLabel.Position = UDim2.fromOffset(8, 6)
+	tLabel.BackgroundTransparency = 1
+	tLabel.Text = titleText
+	tLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+	tLabel.TextSize = 10
+	tLabel.Font = Enum.Font.GothamBold
+	tLabel.TextXAlignment = Enum.TextXAlignment.Left
+	tLabel.Parent = card
+
+	local vLabel = Instance.new("TextLabel")
+	vLabel.Size = UDim2.new(1, -16, 0, 20)
+	vLabel.Position = UDim2.fromOffset(8, 22)
+	vLabel.BackgroundTransparency = 1
+	vLabel.Text = initialValue
+	vLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	vLabel.TextSize = 12
+	vLabel.Font = Enum.Font.GothamBold
+	vLabel.TextXAlignment = Enum.TextXAlignment.Left
+	vLabel.Parent = card
+
+	return vLabel
+end
+
+local gameNameVal = createDashboardCard("GAME NAME", "กำลังโหลดชื่อเกม...")
+local uptimeVal = createDashboardCard("SESSION UPTIME", "00:00:00")
+local playersVal = createDashboardCard("SERVER PLAYERS", "0 / 0")
+local pingVal = createDashboardCard("NETWORK PING", "0 ms")
+local fpsVal = createDashboardCard("FRAME RATE (FPS)", "0 FPS")
+
+task.spawn(function()
+	local success, info = pcall(function() return MarketplaceService:GetProductInfo(game.PlaceId) end)
+	if success and info and info.Name then
+		gameNameVal.Text = info.Name
+	else
+		gameNameVal.Text = "Place ID: " .. tostring(game.PlaceId)
+	end
+end)
+
+local frameCount = 0
+local lastFpsUpdate = tick()
+
+RunService.Heartbeat:Connect(function()
+	local elapsed = math.floor(tick() - startTime)
+	local hours = math.floor(elapsed / 3600)
+	local minutes = math.floor((elapsed % 3600) / 60)
+	local seconds = elapsed % 60
+	uptimeVal.Text = string.format("%02d:%02d:%02d", hours, minutes, seconds)
+	playersVal.Text = #Players:GetPlayers() .. " / " .. Players.MaxPlayers
+
+	pcall(function()
+		local networkPing = player:GetNetworkPing() * 1000
+		pingVal.Text = string.format("%.0f ms", networkPing)
+	end)
+
+	frameCount = frameCount + 1
+	if tick() - lastFpsUpdate >= 1 then
+		fpsVal.Text = math.floor(frameCount / (tick() - lastFpsUpdate)) .. " FPS"
+		frameCount = 0
+		lastFpsUpdate = tick()
+	end
+end)
+
+--==================================================
+-- PLAYER TAB
+--==================================================
+
+local function createToggleButton(parent, text, initialStatus, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -4, 0, 36)
+	btn.BackgroundColor3 = Color3.fromRGB(18,18,18)
+	btn.BorderSizePixel = 0
+	btn.Text = text .. (initialStatus and " [ เปิด ]" or " [ ปิด ]")
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	btn.TextSize = 11
+	btn.Font = Enum.Font.GothamBold
+	btn.AutoButtonColor = false
+	btn.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 7)
+	corner.Parent = btn
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = ThemeColor
+	stroke.Thickness = 1
+	stroke.Parent = btn
+
+	local active = initialStatus
+	btn.MouseButton1Click:Connect(function()
+		active = not active
+		btn.Text = text .. (active and " [ เปิด ]" or " [ ปิด ]")
+		callback(active)
+	end)
+	return btn
+end
+
+createToggleButton(playerScroll, "เปิดใช้งาน WalkSpeed กำหนดเอง", false, function(state)
+	useWalkSpeed = state
+end)
+
+createToggleButton(playerScroll, "เปิดใช้งาน JumpPower กำหนดเอง", false, function(state)
+	useJumpPower = state
+end)
+
+createToggleButton(playerScroll, "เร่งแสงสว่าง (Fullbright)", false, function(state)
+	fullbrightEnabled = state
+	Lighting.Brightness = fullbrightEnabled and 2 or 1
+	Lighting.ClockTime = fullbrightEnabled and 14 or 0
+	Lighting.GlobalShadows = not fullbrightEnabled
+end)
+
+createToggleButton(playerScroll, "👻 ระบบทะลุกำแพง (Noclip)", false, function(state)
+	noclipActive = state
+end)
+
+RunService.Stepped:Connect(function()
+	if noclipActive and player.Character then
+		for _, part in pairs(player.Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+end)
+
+createToggleButton(playerScroll, "🛸 ระบบบินอิสระ (Fly Mode)", false, function(state)
+	flyEnabled = state
+end)
+
+RunService.RenderStepped:Connect(function()
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	if flyEnabled and root then
+		local bv = root:FindFirstChild("OmegaFly") or Instance.new("BodyVelocity")
+		bv.Name = "OmegaFly"
+		bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bv.Velocity = Camera.CFrame.LookVector * 50
+		bv.Parent = root
+	else
+		if root and root:FindFirstChild("OmegaFly") then
+			root.OmegaFly:Destroy()
+		end
+	end
+end)
+
+local sliderObjects = {}
+local function createSlider(parent, sliderName, minValue, maxValue, defaultValue, callback, displayFunction)
+	local holder = Instance.new("Frame")
+	holder.Size = UDim2.new(1,-4,0,62)
+	holder.BackgroundTransparency = 1
+	holder.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1,-60,0,20)
+	label.Position = UDim2.fromOffset(3,0)
+	label.BackgroundTransparency = 1
+	label.Text = sliderName
+	label.TextColor3 = Color3.fromRGB(235,235,235)
+	label.TextSize = 11
+	label.Font = Enum.Font.GothamBold
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = holder
+
+	local valueLabel = Instance.new("TextLabel")
+	valueLabel.Size = UDim2.fromOffset(55,20)
+	valueLabel.Position = UDim2.new(1,-55,0,0)
+	valueLabel.BackgroundTransparency = 1
+	valueLabel.TextColor3 = ThemeColor
+	valueLabel.TextSize = 11
+	valueLabel.Font = Enum.Font.GothamBold
+	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	valueLabel.Parent = holder
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(1,-10,0,6)
+	bar.Position = UDim2.fromOffset(5,38)
+	bar.BackgroundColor3 = Color3.fromRGB(45,45,45)
+	bar.BorderSizePixel = 0
+	bar.Active = true
+	bar.Parent = holder
+
+	local barCorner = Instance.new("UICorner")
+	barCorner.CornerRadius = UDim.new(1,0)
+	barCorner.Parent = bar
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new(0,0,1,0)
+	fill.BackgroundColor3 = ThemeColor
+	fill.BorderSizePixel = 0
+	fill.Parent = bar
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(1,0)
+	fillCorner.Parent = fill
+
+	local knob = Instance.new("TextButton")
+	knob.Size = UDim2.fromOffset(16,16)
+	knob.AnchorPoint = Vector2.new(0.5,0.5)
+	knob.BackgroundColor3 = ThemeColor
+	knob.BorderSizePixel = 0
+	knob.Text = ""
+	knob.AutoButtonColor = false
+	knob.ZIndex = 10
+	knob.Parent = bar
+
+	local knobCorner = Instance.new("UICorner")
+	knobCorner.CornerRadius = UDim.new(1,0)
+	knobCorner.Parent = knob
+
+	local dragging = false
+	local function updateValueFromX(x)
+		local barPosition = bar.AbsolutePosition.X
+		local barSize = bar.AbsoluteSize.X
+		if barSize <= 0 then return end
+		local percent = math.clamp((x - barPosition) / barSize, 0, 1)
+		local currentValue = minValue + ((maxValue - minValue) * percent)
+
+		knob.Position = UDim2.new(percent,0,0.5,0)
+		fill.Size = UDim2.new(percent,0,1,0)
+		valueLabel.Text = displayFunction and displayFunction(currentValue) or tostring(math.floor(currentValue + 0.5))
+		callback(currentValue)
+	end
+
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			updateValueFromX(input.Position.X)
+		end
+	end)
+	knob.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if not dragging then return end
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			updateValueFromX(input.Position.X)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	task.defer(function()
+		local percent = (defaultValue - minValue) / (maxValue - minValue)
+		knob.Position = UDim2.new(percent,0,0.5,0)
+		fill.Size = UDim2.new(percent,0,1,0)
+		if displayFunction then valueLabel.Text = displayFunction(defaultValue) end
+	end)
+
+	table.insert(sliderObjects, { Fill = fill, Knob = knob, ValueLabel = valueLabel })
+	return holder
+end
+
+createSlider(playerScroll, "WALKSPEED", 16, 150, 16, function(v) customWalkSpeed = v end)
+createSlider(playerScroll, "JUMPPOWER", 50, 250, 50, function(v) customJumpPower = v end)
+
+RunService.Heartbeat:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("Humanoid") then
+		local hum = char.Humanoid
+		if useWalkSpeed then hum.WalkSpeed = customWalkSpeed end
+		if useJumpPower then hum.JumpPower = customJumpPower end
+	end
+end)
+
+--==================================================
+-- TELEPORT TAB
+--==================================================
+
+local function createActionButton(parent, text, callback)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, -4, 0, 36)
+	btn.BackgroundColor3 = Color3.fromRGB(18,18,18)
+	btn.BorderSizePixel = 0
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255,255,255)
+	btn.TextSize = 11
+	btn.Font = Enum.Font.GothamBold
+	btn.AutoButtonColor = false
+	btn.Parent = parent
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 7)
+	corner.Parent = btn
+
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = ThemeColor
+	stroke.Thickness = 1
+	stroke.Parent = btn
+
+	btn.MouseButton1Click:Connect(callback)
+	return btn
+end
+
+createActionButton(teleportScroll, "📍 บันทึกตำแหน่งปัจจุบัน (Save Pos)", function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedTeleportPos = char.HumanoidRootPart.CFrame
+	end
+end)
+
+createActionButton(teleportScroll, "🚀 วาร์ปไปยังตำแหน่งที่บันทึกไว้", function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") and savedTeleportPos then
+		char.HumanoidRootPart.CFrame = savedTeleportPos
+	end
+end)
+
+createActionButton(teleportScroll, "🏠 วาร์ปกลับจุดเกิด (Spawn)", function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		local spawnLocation = Workspace:FindFirstChild("SpawnLocation", true)
+		if spawnLocation then
+			char.HumanoidRootPart.CFrame = spawnLocation.CFrame + Vector3.new(0, 3, 0)
+		end
+	end
+end)
+
+--==================================================
+-- PLAYER LOCK TAB
+--==================================================
+
+createToggleButton(playerLockScroll, "🎯 เปิดระบบล็อคเป้าผู้เล่น (Aim Lock)", false, function(state)
+	playerLockEnabled = state
+end)
+
+createActionButton(playerLockScroll, "🔄 สลับเป้าเล็ง: เล็งหัว (Head)", function()
+	if aimPartName == "Head" then
+		aimPartName = "HumanoidRootPart"
+	else
+		aimPartName = "Head"
+	end
+end)
+
+createToggleButton(playerLockScroll, "⭕ แสดงวงขอบเขต (FOV Circle)", true, function(state)
+	fovEnabled = state
+end)
+
+createSlider(playerLockScroll, "FOV RADIUS", 50, 400, 120, function(value)
+	fovRadius = value
+end, function(value)
+	return math.floor(value) .. " px"
+end)
+
+local fovColors = {
+	{ Name = "สีขาว (White)", Color = Color3.fromRGB(255, 255, 255) },
+	{ Name = "สีแดง (Red)", Color = Color3.fromRGB(255, 0, 0) },
+	{ Name = "สีเขียว (Green)", Color = Color3.fromRGB(0, 255, 100) },
+	{ Name = "สีน้ำเงิน (Blue)", Color = Color3.fromRGB(0, 120, 255) }
+}
+local fovColorIndex = 1
+
+local fovColorBtn = Instance.new("TextButton")
+fovColorBtn.Size = UDim2.new(1, -4, 0, 36)
+fovColorBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+fovColorBtn.BorderSizePixel = 0
+fovColorBtn.Text = "🎨 เปลี่ยนสีวง FOV: " .. fovColors[fovColorIndex].Name
+fovColorBtn.TextColor3 = fovColors[fovColorIndex].Color
+fovColorBtn.TextSize = 11
+fovColorBtn.Font = Enum.Font.GothamBold
+fovColorBtn.AutoButtonColor = false
+fovColorBtn.Parent = playerLockScroll
+
+local fovBtnCorner = Instance.new("UICorner")
+fovBtnCorner.CornerRadius = UDim.new(0, 7)
+fovBtnCorner.Parent = fovColorBtn
+
+local fovBtnStroke = Instance.new("UIStroke")
+fovBtnStroke.Color = ThemeColor
+fovBtnStroke.Thickness = 1
+fovBtnStroke.Parent = fovColorBtn
+
+fovColorBtn.MouseButton1Click:Connect(function()
+	fovColorIndex = fovColorIndex % #fovColors + 1
+	local selected = fovColors[fovColorIndex]
+	fovColor = selected.Color
+	fovColorBtn.Text = "🎨 เปลี่ยนสีวง FOV: " .. selected.Name
+	fovColorBtn.TextColor3 = fovColor
+end)
+
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 1.5
+fovCircle.Filled = false
+fovCircle.Transparency = 0.8
+
+local function getClosestPlayerInFOV()
+	local closestPlayer = nil
+	local shortestDistance = math.huge
+	local myChar = player.Character
+	local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+	if not myRoot then return nil end
+
+	local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player and p.Character then
+			local targetRoot = p.Character:FindFirstChild("HumanoidRootPart")
+			local targetHumanoid = p.Character:FindFirstChildOfClass("Humanoid")
+			if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+				local vector, onScreen = Camera:WorldToViewportPoint(targetRoot.Position)
+				if onScreen then
+					local screenPos = Vector2.new(vector.X, vector.Y)
+					local distFromCenter = (screenPos - screenCenter).Magnitude
+					if distFromCenter <= fovRadius and distFromCenter < shortestDistance then
+						shortestDistance = distFromCenter
+						closestPlayer = p
+					end
+				end
+			end
+		end
+	end
+	return closestPlayer
+end
+
+RunService.RenderStepped:Connect(function()
+	local camSize = Camera.ViewportSize
+	fovCircle.Position = Vector2.new(camSize.X / 2, camSize.Y / 2)
+	fovCircle.Visible = playerLockEnabled and fovEnabled
+	fovCircle.Radius = fovRadius
+	fovCircle.Color = fovColor
+
+	if playerLockEnabled then
+		local target = getClosestPlayerInFOV()
+		if target and target.Character then
+			local part = target.Character:FindFirstChild(aimPartName)
+			if part then
+				Camera.CFrame = CFrame.new(Camera.CFrame.Position, part.Position)
+			end
+		end
+	end
+end)
+
+--==================================================
+-- OPTIMIZATION TAB (Anti-Lag, Ultra Anti-Lag, FPS & Potato Mode)
+--==================================================
+
+createActionButton(optimizationScroll, "⚡ เปิดสคริปต์ลดแล็ค (Anti-Lag)", function()
+	pcall(function()
+		Lighting.GlobalShadows = false
+		Lighting.FogEnd = 9e9
+		for _, v in pairs(Workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Material = Enum.Material.SmoothPlastic
+				v.Reflectance = 0
+			elseif v:IsA("Decal") or v:IsA("Texture") then
+				v.Transparency = 1
+			end
+		end
+	end)
+end)
+
+createActionButton(optimizationScroll, "🔥 เปิดสคริปต์ลดแล็คขั้นสูง (Ultra Anti-Lag)", function()
+	pcall(function()
+		Lighting.GlobalShadows = false
+		Lighting.Brightness = 2
+		for _, v in pairs(Workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.Material = Enum.Material.SmoothPlastic
+				v.CastShadow = false
+				v.Reflectance = 0
+			elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+				v.Enabled = false
+			elseif v:IsA("Decal") or v:IsA("Texture") then
+				v.Transparency = 1
+			end
+		end
+		for _, p in pairs(Players:GetPlayers()) do
+			if p.Character then
+				for _, v in pairs(p.Character:GetDescendants()) do
+					if v:IsA("BasePart") then
+						v.CastShadow = false
+					elseif v:IsA("ParticleEmitter") then
+						v.Enabled = false
+					end
+				end
+			end
+		end
+	end)
+end)
+
+local fpsButton = Instance.new("TextButton")
+fpsButton.Size = UDim2.new(1, -4, 0, 36)
+fpsButton.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+fpsButton.BorderSizePixel = 0
+fpsButton.Text = "⏱️ ล็อก FPS: Max"
+fpsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsButton.TextSize = 11
+fpsButton.Font = Enum.Font.GothamBold
+fpsButton.AutoButtonColor = false
+fpsButton.Parent = optimizationScroll
+
+local fpsCorner = Instance.new("UICorner")
+fpsCorner.CornerRadius = UDim.new(0, 7)
+fpsCorner.Parent = fpsButton
+local fpsStroke = Instance.new("UIStroke")
+fpsStroke.Color = ThemeColor
+fpsStroke.Thickness = 1
+fpsStroke.Parent = fpsButton
+
+fpsButton.MouseButton1Click:Connect(function()
+	if currentFpsCap == "Max" then
+		currentFpsCap = 60
+		fpsButton.Text = "⏱️ ล็อก FPS: 60 FPS"
+		pcall(function() setfpscap(60) end)
+	else
+		currentFpsCap = "Max"
+		fpsButton.Text = "⏱️ ล็อก FPS: Max"
+		pcall(function() setfpscap(999) end)
+	end
+end)
+
+createToggleButton(optimizationScroll, "🌙 โหมดจอดำ AFK (Potato Mode)", false, function(state)
+	potatoModeActive = state
+	if potatoModeActive then
+		if not potatoOverlay then
+			potatoOverlay = Instance.new("ScreenGui")
+			potatoOverlay.Name = "PotatoModeOverlay"
+			potatoOverlay.IgnoreGuiInset = true
+			potatoOverlay.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+			potatoOverlay.Parent = player:WaitForChild("PlayerGui")
+
+			local bg = Instance.new("Frame")
+			bg.Size = UDim2.new(1, 0, 1, 0)
+			bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			bg.BorderSizePixel = 0
+			bg.Parent = potatoOverlay
+
+			local txt = Instance.new("TextLabel")
+			txt.Size = UDim2.new(1, 0, 0, 50)
+			txt.Position = UDim2.new(0, 0, 0.5, -25)
+			txt.BackgroundTransparency = 1
+			txt.Text = "POTATO AFK MODE ACTIVE\n(หยุดเรนเดอร์ภาพชั่วคราวเพื่อประหยัดพลังงาน)"
+			txt.TextColor3 = Color3.fromRGB(200, 200, 200)
+			txt.TextSize = 14
+			txt.Font = Enum.Font.GothamBold
+			txt.Parent = bg
+		end
+		potatoOverlay.Enabled = true
+		RunService:Set3dRenderingEnabled(false)
+	else
+		if potatoOverlay then
+			potatoOverlay.Enabled = false
+		end
+		RunService:Set3dRenderingEnabled(true)
+	end
+end)
+
+--==================================================
+-- PLAYER INSPECTOR & SPECTATE TAB
+--==================================================
+
+local inspectorListContainer = Instance.new("Frame")
+inspectorListContainer.Size = UDim2.new(1, -4, 0, 180)
+inspectorListContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+inspectorListContainer.BorderSizePixel = 0
+inspectorListContainer.Parent = inspectorScroll
+
+local ilcCorner = Instance.new("UICorner")
+ilcCorner.CornerRadius = UDim.new(0, 7)
+ilcCorner.Parent = inspectorListContainer
+local ilcStroke = Instance.new("UIStroke")
+ilcStroke.Color = ThemeColor
+ilcStroke.Thickness = 1
+ilcStroke.Parent = inspectorListContainer
+
+local inspectorScrollFrame = Instance.new("ScrollingFrame")
+inspectorScrollFrame.Size = UDim2.new(1, -8, 1, -8)
+inspectorScrollFrame.Position = UDim2.fromOffset(4, 4)
+inspectorScrollFrame.BackgroundTransparency = 1
+inspectorScrollFrame.BorderSizePixel = 0
+inspectorScrollFrame.ScrollBarThickness = 3
+inspectorScrollFrame.ScrollBarImageColor3 = ThemeColor
+inspectorScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+inspectorScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+inspectorScrollFrame.Parent = inspectorListContainer
+
+local insLayout = Instance.new("UIListLayout")
+insLayout.Padding = UDim.new(0, 4)
+insLayout.Parent = inspectorScrollFrame
+
+local spectateStatusLabel = Instance.new("TextLabel")
+spectateStatusLabel.Size = UDim2.new(1, -4, 0, 30)
+spectateStatusLabel.BackgroundTransparency = 1
+spectateStatusLabel.Text = "กำลังส่อง: [ ไม่มีเป้าหมาย ]"
+spectateStatusLabel.TextColor3 = ThemeColor
+spectateStatusLabel.TextSize = 11
+spectateStatusLabel.Font = Enum.Font.GothamBold
+spectateStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+spectateStatusLabel.Parent = inspectorScroll
+
+createActionButton(inspectorScroll, "👁️ ยกเลิกการส่อง (กลับตัวละครเดิม)", function()
+	spectatingPlayer = nil
+	Camera.CameraSubject = player.Character and player.Character.Humanoid or nil
+	spectateStatusLabel.Text = "กำลังส่อง: [ ไม่มีเป้าหมาย ]"
+end)
+
+local function refreshInspectorList()
+	for _, child in pairs(inspectorScrollFrame:GetChildren()) do
+		if child:IsA("Frame") then child:Destroy() end
+	end
+
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player then
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, 0, 0, 34)
+			row.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+			row.BorderSizePixel = 0
+			row.Parent = inspectorScrollFrame
+
+			local rCorner = Instance.new("UICorner")
+			rCorner.CornerRadius = UDim.new(0, 5)
+			rCorner.Parent = row
+
+			local nameLbl = Instance.new("TextLabel")
+			nameLbl.Size = UDim2.new(0.6, 0, 1, 0)
+			nameLbl.Position = UDim2.fromOffset(8, 0)
+			nameLbl.BackgroundTransparency = 1
+			nameLbl.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+			nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+			nameLbl.TextSize = 10
+			nameLbl.Font = Enum.Font.GothamBold
+			nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+			nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+			nameLbl.Parent = row
+
+			local specBtn = Instance.new("TextButton")
+			specBtn.Size = UDim2.fromOffset(70, 24)
+			specBtn.Position = UDim2.new(1, -75, 0, 5)
+			specBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 120)
+			specBtn.BorderSizePixel = 0
+			specBtn.Text = "ส่องกล้อง"
+			specBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			specBtn.TextSize = 10
+			specBtn.Font = Enum.Font.GothamBold
+			specBtn.Parent = row
+
+			local sbc = Instance.new("UICorner")
+			sbc.CornerRadius = UDim.new(0, 4)
+			sbc.Parent = specBtn
+
+			specBtn.MouseButton1Click:Connect(function()
+				spectatingPlayer = p
+				if p.Character and p.Character:FindFirstChildOfClass("Humanoid") then
+					Camera.CameraSubject = p.Character.Humanoid
+					spectateStatusLabel.Text = "กำลังส่อง: " .. p.DisplayName
+				end
+			end)
+		end
+	end
+end
+
+refreshInspectorList()
+Players.PlayerAdded:Connect(refreshInspectorList)
+Players.PlayerRemoving:Connect(refreshInspectorList)
+
+--==================================================
+-- SCRIPT EXECUTOR TAB
+--==================================================
+
+local nameBoxHolder = Instance.new("Frame")
+nameBoxHolder.Size = UDim2.new(1, -4, 0, 32)
+nameBoxHolder.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+nameBoxHolder.BorderSizePixel = 0
+nameBoxHolder.Parent = executorScroll
+
+local nbhCorner = Instance.new("UICorner")
+nbhCorner.CornerRadius = UDim.new(0, 7)
+nbhCorner.Parent = nameBoxHolder
+local nbhStroke = Instance.new("UIStroke")
+nbhStroke.Color = ThemeColor
+nbhStroke.Thickness = 1
+nbhStroke.Parent = nameBoxHolder
+
+local scriptNameBox = Instance.new("TextBox")
+scriptNameBox.Size = UDim2.new(1, -12, 1, 0)
+scriptNameBox.Position = UDim2.fromOffset(6, 0)
+scriptNameBox.BackgroundTransparency = 1
+scriptNameBox.ClearTextOnFocus = false
+scriptNameBox.PlaceholderText = "ชื่อสคริปต์..."
+scriptNameBox.Text = ""
+scriptNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+scriptNameBox.TextSize = 11
+scriptNameBox.Font = Enum.Font.GothamBold
+scriptNameBox.TextXAlignment = Enum.TextXAlignment.Left
+scriptNameBox.Parent = nameBoxHolder
+
+local codeBoxHolder = Instance.new("Frame")
+codeBoxHolder.Size = UDim2.new(1, -4, 0, 100)
+codeBoxHolder.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+codeBoxHolder.BorderSizePixel = 0
+codeBoxHolder.Parent = executorScroll
+
+local cbhCorner = Instance.new("UICorner")
+cbhCorner.CornerRadius = UDim.new(0, 7)
+cbhCorner.Parent = codeBoxHolder
+local cbhStroke = Instance.new("UIStroke")
+cbhStroke.Color = ThemeColor
+cbhStroke.Thickness = 1
+cbhStroke.Parent = codeBoxHolder
+
+local scriptTextBox = Instance.new("TextBox")
+scriptTextBox.Size = UDim2.new(1, -12, 1, -12)
+scriptTextBox.Position = UDim2.fromOffset(6, 6)
+scriptTextBox.BackgroundTransparency = 1
+scriptTextBox.MultiLine = true
+scriptTextBox.ClearTextOnFocus = false
+scriptTextBox.PlaceholderText = "-- โค้ดสคริปต์ Lua..."
+scriptTextBox.Text = ""
+scriptTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+scriptTextBox.TextSize = 11
+scriptTextBox.Font = Enum.Font.Code
+scriptTextBox.TextXAlignment = Enum.TextXAlignment.Left
+scriptTextBox.TextYAlignment = Enum.TextYAlignment.Top
+scriptTextBox.Parent = codeBoxHolder
+
+local btnRow = Instance.new("Frame")
+btnRow.Size = UDim2.new(1, -4, 0, 32)
+btnRow.BackgroundTransparency = 1
+btnRow.Parent = executorScroll
+
+local btnLayout = Instance.new("UIListLayout")
+btnLayout.FillDirection = Enum.FillDirection.Horizontal
+btnLayout.Padding = UDim.new(0, 6)
+btnLayout.Parent = btnRow
+
+local function createExecButton(name, color, callback)
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(0.24, -4, 1, 0)
+	b.BackgroundColor3 = color
+	b.BorderSizePixel = 0
+	b.Text = name
+	b.TextColor3 = Color3.fromRGB(255, 255, 255)
+	b.TextSize = 11
+	b.Font = Enum.Font.GothamBold
+	b.AutoButtonColor = false
+	b.Parent = btnRow
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 6)
+	c.Parent = b
+
+	b.MouseButton1Click:Connect(callback)
+	return b
+end
+
+createExecButton("▶ รัน", Color3.fromRGB(0, 160, 60), function()
+	if scriptTextBox.Text ~= "" then
+		pcall(function() loadstring(scriptTextBox.Text)() end)
+	end
+end)
+
+createExecButton("📋 ดึงคลิปบอร์ด", Color3.fromRGB(40, 40, 40), function()
+	local success, text = pcall(function() return getclipboard and getclipboard() or "" end)
+	if success and text ~= "" then scriptTextBox.Text = text end
+end)
+
+createExecButton("🗑 ลบ", Color3.fromRGB(160, 40, 40), function()
+	scriptTextBox.Text = ""
+	scriptNameBox.Text = ""
+end)
+
+createExecButton("💾 บันทึก", Color3.fromRGB(60, 60, 160), function()
+	if scriptTextBox.Text ~= "" then
+		local sName = scriptNameBox.Text ~= "" and scriptNameBox.Text or ("สคริปต์ #" .. (#savedScripts + 1))
+		table.insert(savedScripts, { Name = sName, Code = scriptTextBox.Text })
+		saveToFile()
+		refreshScriptList()
+		scriptNameBox.Text = ""
+	end
+end)
+
+local scriptListLabel = Instance.new("TextLabel")
+scriptListLabel.Size = UDim2.new(1, -4, 0, 20)
+scriptListLabel.BackgroundTransparency = 1
+scriptListLabel.Text = "⭐ SAVED SCRIPTS"
+scriptListLabel.TextColor3 = ThemeColor
+scriptListLabel.TextSize = 11
+scriptListLabel.Font = Enum.Font.GothamBold
+scriptListLabel.TextXAlignment = Enum.TextXAlignment.Left
+scriptListLabel.Parent = executorScroll
+
+local scriptListContainer = Instance.new("Frame")
+scriptListContainer.Size = UDim2.new(1, -4, 0, 100)
+scriptListContainer.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+scriptListContainer.BorderSizePixel = 0
+scriptListContainer.Parent = executorScroll
+
+local slcCorner = Instance.new("UICorner")
+slcCorner.CornerRadius = UDim.new(0, 7)
+slcCorner.Parent = scriptListContainer
+local slcStroke = Instance.new("UIStroke")
+slcStroke.Color = ThemeColor
+slcStroke.Thickness = 1
+slcStroke.Parent = scriptListContainer
+
+local scriptListScroll = Instance.new("ScrollingFrame")
+scriptListScroll.Size = UDim2.new(1, -8, 1, -8)
+scriptListScroll.Position = UDim2.fromOffset(4, 4)
+scriptListScroll.BackgroundTransparency = 1
+scriptListScroll.BorderSizePixel = 0
+scriptListScroll.ScrollBarThickness = 3
+scriptListScroll.ScrollBarImageColor3 = ThemeColor
+scriptListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scriptListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scriptListScroll.Parent = scriptListContainer
+
+local slListLayout = Instance.new("UIListLayout")
+slListLayout.Padding = UDim.new(0, 4)
+slListLayout.Parent = scriptListScroll
+
+function refreshScriptList()
+	for _, child in pairs(scriptListScroll:GetChildren()) do
+		if child:IsA("Frame") then child:Destroy() end
+	end
+
+	for i, item in ipairs(savedScripts) do
+		local itemRow = Instance.new("Frame")
+		itemRow.Size = UDim2.new(1, 0, 0, 28)
+		itemRow.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		itemRow.BorderSizePixel = 0
+		itemRow.Parent = scriptListScroll
+
+		local irCorner = Instance.new("UICorner")
+		irCorner.CornerRadius = UDim.new(0, 5)
+		irCorner.Parent = itemRow
+
+		local loadBtn = Instance.new("TextButton")
+		loadBtn.Size = UDim2.new(1, -32, 1, 0)
+		loadBtn.BackgroundTransparency = 1
+		loadBtn.Text = "  📂 " .. item.Name
+		loadBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		loadBtn.TextSize = 10
+		loadBtn.Font = Enum.Font.GothamBold
+		loadBtn.TextXAlignment = Enum.TextXAlignment.Left
+		loadBtn.Parent = itemRow
+
+		loadBtn.MouseButton1Click:Connect(function()
+			scriptTextBox.Text = item.Code
+			scriptNameBox.Text = item.Name
+		end)
+
+		local delBtn = Instance.new("TextButton")
+		delBtn.Size = UDim2.fromOffset(26, 26)
+		delBtn.Position = UDim2.new(1, -28, 0, 1)
+		delBtn.BackgroundColor3 = Color3.fromRGB(120, 25, 25)
+		delBtn.BorderSizePixel = 0
+		delBtn.Text = "×"
+		delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		delBtn.TextSize = 14
+		delBtn.Font = Enum.Font.GothamBold
+		delBtn.Parent = itemRow
+
+		local dbCorner = Instance.new("UICorner")
+		dbCorner.CornerRadius = UDim.new(0, 4)
+		dbCorner.Parent = delBtn
+
+		delBtn.MouseButton1Click:Connect(function()
+			table.remove(savedScripts, i)
+			saveToFile()
+			refreshScriptList()
+		end)
+	end
+end
+
+refreshScriptList()
+
+--==================================================
+-- ITEMS & ESP TAB
+--==================================================
+
+createToggleButton(itemsScroll, "ESP กล่อง (Box ESP)", false, function(state)
+	espBoxEnabled = state
+end)
+
+createToggleButton(itemsScroll, "ESP เส้นเลือด (Tracer ESP)", false, function(state)
+	espTracerEnabled = state
+end)
+
+createToggleButton(itemsScroll, "🎯 ขยายฮิตบ็อกซ์เป้าหมาย (Hitbox Expander)", false, function(state)
+	hitboxExpanderEnabled = state
+end)
+
+RunService.Heartbeat:Connect(function()
+	if hitboxExpanderEnabled then
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+				local hrp = p.Character.HumanoidRootPart
+				if not originalSizes[hrp] then originalSizes[hrp] = hrp.Size end
+				hrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+				hrp.Transparency = 0.6
+				hrp.CanCollide = false
+			end
+		end
+	else
+		for hrp, orig in pairs(originalSizes) do
+			if hrp and hrp.Parent then
+				hrp.Size = orig
+				hrp.Transparency = 1
+			end
+		end
+	end
+end)
+
+RunService.RenderStepped:Connect(function()
+	for _, p in pairs(Players:GetPlayers()) do
+		if p ~= player then
+			local char = p.Character
+			local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+			local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+			local isAlive = (char and rootPart and humanoid and humanoid.Health > 0)
+			
+			if not espStorage[p] then
+				espStorage[p] = { Box = Drawing.new("Square"), Tracer = Drawing.new("Line"), Text = Drawing.new("Text") }
+			end
+			local visuals = espStorage[p]
+			
+			if isAlive and (espBoxEnabled or espTracerEnabled) then
+				local vector, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+				if onScreen then
+					if espBoxEnabled then
+						visuals.Box.Visible = true
+						visuals.Box.Size = Vector2.new(40, 60)
+						visuals.Box.Position = Vector2.new(vector.X - 20, vector.Y - 30)
+						visuals.Box.Color = EspColor
+						visuals.Box.Thickness = 1.5
+					else
+						visuals.Box.Visible = false
+					end
+					if espTracerEnabled then
+						visuals.Tracer.Visible = true
+						visuals.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+						visuals.Tracer.To = Vector2.new(vector.X, vector.Y + 30)
+						visuals.Tracer.Color = EspColor
+						visuals.Tracer.Thickness = 1.2
+					else
+						visuals.Tracer.Visible = false
+					end
+					visuals.Text.Visible = true
+					visuals.Text.Text = p.Name
+					visuals.Text.Size = 12
+					visuals.Text.Center = true
+					visuals.Text.Outline = true
+					visuals.Text.Color = Color3.fromRGB(255, 255, 255)
+					visuals.Text.Position = Vector2.new(vector.X, vector.Y - 45)
+				else
+					visuals.Box.Visible = false
+					visuals.Tracer.Visible = false
+					visuals.Text.Visible = false
+				end
+			else
+				if visuals then
+					visuals.Box.Visible = false
+					visuals.Tracer.Visible = false
+					visuals.Text.Visible = false
+				end
+			end
+		end
+	end
+end)
+
+--==================================================
+-- SETTINGS TAB
+--==================================================
+
+createSlider(settingsScroll, "GUI SIZE", 0.60, 1.20, 0.85, function(value)
+	GuiScale = value
+	scale.Scale = value
+end, function(value) return math.floor(value * 100 + 0.5) .. "%" end)
+
+createSlider(settingsScroll, "TRANSPARENCY", 0, 100, 0, function(value)
+	Transparency = value / 100
+	main.BackgroundTransparency = Transparency
+	header.BackgroundTransparency = Transparency
+	sidebar.BackgroundTransparency = Transparency
+	page.BackgroundTransparency = Transparency
+	profileCard.BackgroundTransparency = Transparency
+	for _, data in pairs(buttons) do data.Button.BackgroundTransparency = math.clamp(Transparency,0,1) end
+end, function(value) return math.floor(value + 0.5) .. "%" end)
+
+local colorHolder = Instance.new("Frame")
+colorHolder.Size = UDim2.new(1,-4,0,75)
+colorHolder.BackgroundTransparency = 1
+colorHolder.Parent = settingsScroll
+
+local colorLabel = Instance.new("TextLabel")
+colorLabel.Size = UDim2.new(1,0,0,20)
+colorLabel.BackgroundTransparency = 1
+colorLabel.Text = "THEME COLOR"
+colorLabel.TextColor3 = Color3.fromRGB(235,235,235)
+colorLabel.TextSize = 11
+colorLabel.Font = Enum.Font.GothamBold
+colorLabel.TextXAlignment = Enum.TextXAlignment.Left
+colorLabel.Parent = colorHolder
+
+local colorButton = Instance.new("TextButton")
+colorButton.Size = UDim2.new(1,0,0,36)
+colorButton.Position = UDim2.fromOffset(0,27)
+colorButton.BackgroundColor3 = Color3.fromRGB(18,18,18)
+colorButton.BorderSizePixel = 0
+colorButton.Text = "RED"
+colorButton.TextColor3 = ThemeColor
+colorButton.TextSize = 11
+colorButton.Font = Enum.Font.GothamBold
+colorButton.AutoButtonColor = false
+colorButton.Parent = colorHolder
+
+local colorCorner = Instance.new("UICorner")
+colorCorner.CornerRadius = UDim.new(0,7)
+colorCorner.Parent = colorButton
+
+local colorStroke = Instance.new("UIStroke")
+colorStroke.Color = ThemeColor
+colorStroke.Thickness = 1
+colorStroke.Parent = colorHolder
+
+local colors = {
+	{ Name = "RED", Color = Color3.fromRGB(255,0,0) },
+	{ Name = "PURPLE", Color = Color3.fromRGB(170,0,255) },
+	{ Name = "BLUE", Color = Color3.fromRGB(0,120,255) },
+	{ Name = "GREEN", Color = Color3.fromRGB(0,255,100) },
+	{ Name = "WHITE", Color = Color3.fromRGB(255,255,255) }
+}
+local colorIndex = 1
+
+colorButton.MouseButton1Click:Connect(function()
+	colorIndex = colorIndex % #colors + 1
+	ThemeColor = colors[colorIndex].Color
+	colorButton.Text = colors[colorIndex].Name
+
+	mainStroke.Color = ThemeColor
+	headerLine.BackgroundColor3 = ThemeColor
+	logo.TextColor3 = ThemeColor
+	logoStroke.Color = ThemeColor
+	minStroke.Color = ThemeColor
+	closeStroke.Color = ThemeColor
+	profileStroke.Color = ThemeColor
+	avatarStroke.Color = ThemeColor
+	uid.TextColor3 = ThemeColor
+	pageTitle.TextColor3 = ThemeColor
+	sidebarScroll.ScrollBarImageColor3 = ThemeColor
+	scriptListScroll.ScrollBarImageColor3 = ThemeColor
+	nbhStroke.Color = ThemeColor
+	cbhStroke.Color = ThemeColor
+	slcStroke.Color = ThemeColor
+	for _, data in pairs(buttons) do data.Stroke.Color = ThemeColor end
+	for _, slider in ipairs(sliderObjects) do
+		slider.Fill.BackgroundColor3 = ThemeColor
+		slider.Knob.BackgroundColor3 = ThemeColor
+		slider.ValueLabel.TextColor3 = ThemeColor
+	end
+	colorButton.TextColor3 = ThemeColor
+	colorStroke.Color = ThemeColor
+end)
+
+--==================================================
+-- ABOUT TAB
+--==================================================
+
+local aboutText = Instance.new("TextLabel")
+aboutText.Size = UDim2.new(1, -4, 0, 240)
+aboutText.BackgroundTransparency = 1
+aboutText.Text = "SCOOP All-in-One Ultimate Hub v4.4\n\n- เพิ่มระบบ Anti-Lag และ Ultra Anti-Lag ลดภาระกราฟิก\n- เพิ่มฟังก์ชันจำกัด FPS (Max / 60 FPS) และโหมดจอดำประหยัดพลังงาน (Potato Mode)\n- เพิ่มระบบส่องผู้เล่น (Player Inspector & Spectate)\n- กดปุ่ม [ RightShift ] เพื่อเปิด/ปิดหน้าต่างเมนู"
+aboutText.TextColor3 = Color3.fromRGB(180,180,180)
+aboutText.TextSize = 11
+aboutText.Font = Enum.Font.Gotham
+aboutText.TextWrapped = true
+aboutText.TextXAlignment = Enum.TextXAlignment.Left
+aboutText.TextYAlignment = Enum.TextYAlignment.Top
+aboutText.Parent = aboutScroll
+
+--==================================================
+-- OPEN / CLOSE & KEYBINDS SYSTEM
+--==================================================
+
+local openButton = Instance.new("TextButton")
+openButton.Name = "OpenS"
+openButton.Size = UDim2.fromOffset(48,48)
+openButton.Position = UDim2.new(0,15,0.5,-24)
+openButton.BackgroundColor3 = Color3.fromRGB(8,8,8)
+openButton.Text = "S"
+openButton.TextColor3 = ThemeColor
+openButton.TextSize = 22
+openButton.Font = Enum.Font.GothamBlack
+openButton.Visible = false
+openButton.AutoButtonColor = false
+openButton.Parent = gui
+
+local openCorner = Instance.new("UICorner")
+openCorner.CornerRadius = UDim.new(1,0)
+openCorner.Parent = openButton
+
+local openStroke = Instance.new("UIStroke")
+openStroke.Color = ThemeColor
+openStroke.Thickness = 2
+openStroke.Parent = openButton
+
+local minimized = false
+minimize.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	minimize.Text = minimized and "▼" or "−"
+	TweenService:Create(main, TweenInfo.new(0.25), {Size = UDim2.fromOffset(580, minimized and 52 or 420)}):Play()
+	task.delay(0.12, function() if minimized then content.Visible = false else content.Visible = true end end)
+end)
+
+close.MouseButton1Click:Connect(function()
+	main.Visible = false
+	openButton.Visible = true
+end)
+
+openButton.MouseButton1Click:Connect(function()
+	main.Visible = true
+	openButton.Visible = false
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.RightShift then
+		if main.Visible then
+			main.Visible = false
+			openButton.Visible = true
+		else
+			main.Visible = true
+			openButton.Visible = false
+		end
+	end
+end)
+
+--==================================================
+-- WINDOW DRAGGING
+--==================================================
+
+local draggingWindow, dragStart, startPosition
+header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingWindow = true
+		dragStart = input.Position
+		startPosition = main.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not draggingWindow then return end
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		local delta = input.Position - dragStart
+		main.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingWindow = false
+	end
+end)
+
+print("SCOOP All-in-One Hub v4.4 Loaded Successfully")
+
